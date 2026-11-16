@@ -64,7 +64,7 @@ tsdown 入口是 `src/server-plugin/index.ts`，输出单文件 ESM `lib/plugin.
 只有以下依赖保持 external，其余全部 inline：
 
     @deepseek-ai/*（dsh-ssh、dsh-subprocess-local 除外）
-    zod 固定 4.4.3，inline
+    zod 固定 4.6.6，inline
 
 `dsh-ssh` 和 `dsh-subprocess-local/output` 在 profile 安装里没有，必须 inline；zod 也必须 inline。
 额外 external 会让目标机 profile 解析失败或拆散 Cordis service registry。`package.json` 的
@@ -216,11 +216,11 @@ profile 的官方 UI（直接打开或被 client 全屏 iframe 嵌入）里，�
 
 ## 兼容性与发布
 
-- `engines.dsh` 与全部 `@deepseek-ai/dsh-*` peer 写区间 `>=0.2.1-rc.2 <=0.2.2-rc.1`（与 client 的
-  `compat/runtimes.json` 同一区间），本仓安装/测试用的 dsh 包钉区间内最新版本 `0.2.2-rc.1`；zod `4.4.3`；
+- `engines.dsh` 与全部 `@deepseek-ai/dsh-*` peer 写区间 `>=0.2.1-rc.2 <=0.2.2-rc.3`（与 client 的
+  `compat/runtimes.json` 同一区间），本仓安装/测试用的 dsh 包钉区间内最新版本 `0.2.2-rc.3`；zod `4.6.6`；
   cordis devDependency 跟该运行时用 `4.1.0`（peer 仍写 `^4.0.5`，覆盖旧的 `4.0.5` profile）；
   `engines.node` 保持 `^22.19.0 || >=24.0.0`。
-- 仓库版本等于发布版本，当前 `0.1.0-alpha.8`，两仓保持一致；内置 server tarball 版本必须精确一致。
+- 仓库版本等于发布版本，当前 `0.1.0-alpha.9`，两仓保持一致；内置 server tarball 版本必须精确一致。
 - 上游发新 dsh 时先改区间与钉版，再重打包并让 client 重新 bundle：`pnpm build` →
   `pnpm pack:server-plugin` → client `node scripts/bundle-server-plugin.mjs --tarball <tgz>`。只改版本号
   不重打包含义为零：`dsh-ssh` 被 inline，协议号与请求 schema 跟着构建时的版本走。
@@ -232,7 +232,7 @@ profile 的官方 UI（直接打开或被 client 全屏 iframe 嵌入）里，�
   workflow 保留 `id-token: write` 并删掉 setup-node 生成的 `_authToken` 占位；仓库不配置 npm token
   secret。runtime 包仍走 server-release.yml。
 - 发布前至少两仓 `pnpm typecheck && pnpm test && pnpm build`，再在隔离 `DSH_HOME` 用区间内最新版本
-  （当前 `0.2.2-rc.1`）启动 profile 做 `/api/handshake` 冒烟。版本号变更但未跑冒烟时不得宣称 verified。
+  （当前 `0.2.2-rc.3`）启动 profile 做 `/api/handshake` 冒烟。版本号变更但未跑冒烟时不得宣称 verified。
 - `dist-runtime/` 的隔离 runtime 包由 `server-release.yml` 发布，矩阵来自 client release 资产
   `runtime-compat.json`（client 的 `compat/runtimes.json` 投影）里该 dsh 声明的平台，并且只构建本仓
   builder 能 stage 的 POSIX 布局（linux x64/arm64 gnu、darwin x64/arm64）；win32 目标尚未纳入（builder

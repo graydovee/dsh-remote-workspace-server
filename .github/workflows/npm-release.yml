@@ -64,20 +64,32 @@ jobs:
           cat "$tarball.sha256"
           tar -tzf "$tarball" | head -n 20
 
-      # A prerelease version cannot be published onto the default `latest`
-      # dist-tag (npm rejects it without --tag), so derive the tag from the
-      # version: `0.1.0-alpha.3` -> `alpha`, `1.0.0` -> `latest`.
+      # npm refuses a prerelease without an explicit --tag, and moving a dist-tag
+      # is not covered by OIDC trusted publishing here (this repository keeps no
+      # token). While the package has no stable release, `latest` must name the
+      # newest prerelease: installers resolve the bare name to `latest`, and
+      # publishing straight to `latest` is OIDC-covered. After the first stable
+      # release, prereleases return to their derived tag (`alpha`, `next`, …) so
+      # `latest` stays on the stable line.
       - name: resolve npm dist-tag
         id: dist-tag
         run: |
           set -euo pipefail
-          version="$(node -p "require('./package.json').version")"
-          if [[ "$version" == *-* ]]; then
-            tag="${version#*-}"
-            echo "tag=${tag%%.*}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          fi
+          node --input-type=commonjs - <<'NODE' >> "$GITHUB_OUTPUT"
+          const { execFileSync } = require('node:child_process')
+          const { name, version } = require('./package.json')
+          const isPrerelease = version.includes('-')
+          const derived = isPrerelease ? version.slice(version.indexOf('-') + 1).split('.')[0] : 'latest'
+          let stable = false
+          try {
+            const listed = JSON.parse(execFileSync('npm', ['view', name, 'versions', '--json'], { encoding: 'utf8' }))
+            const published = Array.isArray(listed) ? listed : [listed]
+            stable = published.some(entry => !entry.includes('-'))
+          } catch {
+            stable = false
+          }
+          process.stdout.write(`tag=${isPrerelease && !stable ? 'latest' : derived}\n`)
+          NODE
 
       - name: publish to npm
         env:
